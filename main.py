@@ -9,7 +9,7 @@ import sqlite3
 import hashlib
 import matplotlib.pyplot as plt
 
-st.set_page_config(layout='wide')
+st.set_page_config(layout='wide', page_title="Sistema de Reservas", page_icon=":car:")
 
 # Configurações de e-mail
 EMAIL_ADDRESS = 'seuemail@gmail.com'
@@ -81,43 +81,46 @@ if 'usuario_logado' not in st.session_state:
 
 # Funções de autenticação
 def login():
-    with st.container():
-        st.subheader('Login')
-        email = st.text_input('E-mail')
-        senha = st.text_input('Senha', type='password')
-        if st.button('Entrar'):
-            if verificar_usuario(email, senha):
-                st.session_state.usuario_logado = email
-                st.success('Login bem-sucedido!')
-                st.experimental_rerun()
-            else:
-                st.error('E-mail ou senha incorretos.')
+    st.markdown('<div style="background-color:#f0f2f6;padding:20px;border-radius:8px;">', unsafe_allow_html=True)
+    st.subheader('Login')
+    email = st.text_input('E-mail', placeholder='Digite seu e-mail')
+    senha = st.text_input('Senha', type='password', placeholder='Digite sua senha')
+    if st.button('Entrar'):
+        if verificar_usuario(email, senha):
+            st.session_state.usuario_logado = email
+            st.success('Login bem-sucedido!')
+            st.experimental_rerun()
+        else:
+            st.error('E-mail ou senha incorretos.')
+    st.markdown('</div>', unsafe_allow_html=True)
 
 def cadastro():
-    with st.container():
-        st.subheader('Cadastro')
-        email = st.text_input('E-mail')
-        senha = st.text_input('Senha', type='password')
-        confirmar_senha = st.text_input('Confirme a Senha', type='password')
-        if st.button('Cadastrar'):
-            if senha == confirmar_senha:
-                if adicionar_usuario(email, senha):
-                    st.success('Cadastro realizado com sucesso!')
-                    st.experimental_rerun()
-                else:
-                    st.error('E-mail já cadastrado.')
+    st.markdown('<div style="background-color:#f0f2f6;padding:20px;border-radius:8px;">', unsafe_allow_html=True)
+    st.subheader('Cadastro')
+    email = st.text_input('E-mail', placeholder='Digite seu e-mail')
+    senha = st.text_input('Senha', type='password', placeholder='Digite sua senha')
+    confirmar_senha = st.text_input('Confirme a Senha', type='password', placeholder='Confirme sua senha')
+    if st.button('Cadastrar'):
+        if senha == confirmar_senha:
+            if adicionar_usuario(email, senha):
+                st.success('Cadastro realizado com sucesso!')
+                st.experimental_rerun()
             else:
-                st.error('As senhas não correspondem.')
+                st.error('E-mail já cadastrado.')
+        else:
+            st.error('As senhas não correspondem.')
+    st.markdown('</div>', unsafe_allow_html=True)
 
 def recuperar_senha():
-    with st.container():
-        st.subheader('Recuperar Senha')
-        email = st.text_input('E-mail')
-        if st.button('Enviar link de recuperação'):
-            nova_senha = 'senha123'  # Idealmente, gere uma senha aleatória ou forneça um link para redefinição
-            atualizar_senha(email, nova_senha)
-            enviar_email(email, 'Recuperação de Senha', f'Sua nova senha é: {nova_senha}')
-            st.success('E-mail de recuperação enviado!')
+    st.markdown('<div style="background-color:#f0f2f6;padding:20px;border-radius:8px;">', unsafe_allow_html=True)
+    st.subheader('Recuperar Senha')
+    email = st.text_input('E-mail', placeholder='Digite seu e-mail')
+    if st.button('Enviar link de recuperação'):
+        nova_senha = 'senha123'  # Idealmente, gere uma senha aleatória ou forneça um link para redefinição
+        atualizar_senha(email, nova_senha)
+        enviar_email(email, 'Recuperação de Senha', f'Sua nova senha é: {nova_senha}')
+        st.success('E-mail de recuperação enviado!')
+    st.markdown('</div>', unsafe_allow_html=True)
 
 def arredondar_para_intervalo(time_obj, intervalo_mins=30):
     total_mins = time_obj.hour * 60 + time_obj.minute
@@ -136,7 +139,7 @@ def veiculo_disponivel(data, hora_inicio, hora_fim, placa):
     return True
 
 # Função para adicionar reserva
-def adicionar_reserva(nome, data, hora_inicio, hora_fim, placa, cidade):
+def adicionar_reserva(data, hora_inicio, hora_fim, placa, cidade):
     data_str = data.strftime('%Y-%m-%d')
     hora_inicio_str = hora_inicio.strftime('%H:%M:%S')
     hora_fim_str = hora_fim.strftime('%H:%M:%S')
@@ -145,7 +148,7 @@ def adicionar_reserva(nome, data, hora_inicio, hora_fim, placa, cidade):
         reserva_id = len(st.session_state.reservas) + 1
         st.session_state.reservas.append({
             'id': reserva_id,
-            'nome': nome,
+            'email_usuario': st.session_state.usuario_logado,  # Usando o e-mail do usuário
             'data': data_str,
             'hora_inicio': hora_inicio_str,
             'hora_fim': hora_fim_str,
@@ -156,16 +159,38 @@ def adicionar_reserva(nome, data, hora_inicio, hora_fim, placa, cidade):
         return True
     return False
 
-def alterar_status_reserva(reserva_id, novo_status):
+def atualizar_status_reserva(reserva_id, novo_status):
     for reserva in st.session_state.reservas:
         if reserva['id'] == reserva_id:
             reserva['status'] = novo_status
             return True
     return False
 
-def exibir_reservas():
+
+def estilizar_reservas(df):
+    def cor_status(status):
+        if status == 'Agendado':
+            return 'background-color: yellow'
+        elif status == 'Cancelado':
+            return 'background-color: red; color: white'
+        elif status == 'Concluído':
+            return 'background-color: green; color: white'
+        else:
+            return ''
+
+    return df.style.applymap(cor_status, subset=['status'])
+
+def exibir_reservas(pagina='todas'):
     df_reservas = pd.DataFrame(st.session_state.reservas)
-    st.dataframe(df_reservas)
+    
+    if pagina == 'minhas':
+        if st.session_state.usuario_logado:
+            df_reservas = df_reservas[df_reservas['email_usuario'] == st.session_state.usuario_logado]
+        else:
+            st.error('Você precisa estar logado para ver suas reservas.')
+            return
+    
+    st.dataframe(df_reservas, use_container_width=True)
 
 def plotar_grafico_barras():
     df_reservas = pd.DataFrame(st.session_state.reservas)
@@ -181,8 +206,8 @@ def plotar_grafico_barras():
     st.pyplot(fig)
 
 # Listas de placas e cidades
-placas = ['ABC-123', 'CVB-321', 'LKJ-586']
-cidades = ['Rio Claro', 'Lençóis Paulista', 'São Carlos']
+placas = ['SWQ1F92 - Nissan Versa Novo', 'SVO6A16 - Saveiro', 'GEZ5262 - Nissan Versa']
+cidades = ['Rio Claro', 'Lençóis Paulista', 'São Carlos', 'Araras', 'Ribeirão Preto', 'Jaboticabal', 'Araraquara', 'Leme', 'Piracicaba' ,'São Paulo' ,'Campinas', 'Ibate', 'Porto Ferreira']
 status_opcoes = ['Concluído', 'Cancelado', 'Agendado']
 
 def home_page():
@@ -194,7 +219,6 @@ def home_page():
         if menu == 'Reservar Veículo':
             with st.sidebar:
                 st.subheader('Reservar Veículo')
-                nome = st.text_input('Seu Nome')
                 data = st.date_input('Data da Reserva')
                 hora_inicio = st.time_input('Hora Início', value=datetime(2024, 1, 1, 9, 0).time())
                 hora_fim = st.time_input('Hora Fim', value=datetime(2024, 1, 1, 9, 30).time())
@@ -204,18 +228,18 @@ def home_page():
                 if st.button('Adicionar Reserva'):
                     hora_inicio = arredondar_para_intervalo(hora_inicio)
                     hora_fim = arredondar_para_intervalo(hora_fim)
-                    sucesso = adicionar_reserva(nome, data, hora_inicio, hora_fim, placa, cidade)
+                    sucesso = adicionar_reserva(data, hora_inicio, hora_fim, placa, cidade)
                     if sucesso:
                         st.success('Reserva adicionada com sucesso!')
                     else:
                         st.error('Veículo não disponível para o horário selecionado.')
             
             st.subheader('Reservas Atuais')
-            exibir_reservas()
+            exibir_reservas(pagina='todas')
         
         elif menu == 'Minhas Reservas':
             st.subheader('Minhas Reservas')
-            exibir_reservas()
+            exibir_reservas(pagina='minhas')
         
         elif menu == 'Alterar Status':
             with st.container():
@@ -224,9 +248,10 @@ def home_page():
                 novo_status = st.selectbox('Novo Status', status_opcoes)
                 
                 if st.button('Atualizar Status'):
-                    sucesso = alterar_status_reserva(reserva_id, novo_status)
+                    sucesso = atualizar_status_reserva(reserva_id, novo_status)
                     if sucesso:
                         st.success('Status atualizado com sucesso!')
+                        exibir_reservas(pagina='todas')  # Atualiza a exibição para refletir o novo status
                     else:
                         st.error('Reserva não encontrada.')
 
