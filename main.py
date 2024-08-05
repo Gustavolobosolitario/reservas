@@ -7,7 +7,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
-import yagmail
 
 
 
@@ -28,22 +27,6 @@ if 'pagina' not in st.session_state:
 
 
 
-
-# Configurações do servidor SMTP
-SMTP_USERNAME = 'analytics@vilaurbe.com.br'
-SMTP_PASSWORD = 'PowerBi16.*'
-
-# Função para enviar e-mails
-def enviar_email(to_email, subject, body):
-    try:
-        yag = yagmail.SMTP(SMTP_USERNAME, SMTP_PASSWORD)
-        yag.send(to=to_email, subject=subject, contents=body)
-        print("E-mail enviado com sucesso!")
-    except Exception as e:
-        print(f"Erro ao enviar e-mail: {e}")
-
-# Teste de envio de e-mail
-enviar_email('analytics@vilaurbe.com.br', 'Teste de Envio', 'Esta é uma mensagem de teste.')
 
 
 
